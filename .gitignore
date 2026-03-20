@@ -1,0 +1,8 @@
+backend/node_modules/
+backend/.env
+backend/data/*.sqlite
+backend/data/*.sqlite-shm
+backend/data/*.sqlite-wal
+backend/npm-debug.log*
+npm-debug.log*
+instructions
