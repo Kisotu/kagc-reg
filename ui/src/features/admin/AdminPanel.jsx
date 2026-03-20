@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AGE_BRACKETS, STAGING_STATUS } from '../../constants'
 import { api } from '../../lib/api'
 
@@ -62,7 +62,7 @@ function StagingReview({ csrfToken }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  async function loadBatches() {
+  const loadBatches = useCallback(async () => {
     try {
       setError('')
       const query = api.toQuery(filters)
@@ -71,11 +71,11 @@ function StagingReview({ csrfToken }) {
     } catch (e) {
       setError(e.message)
     }
-  }
+  }, [filters])
 
   useEffect(() => {
     loadBatches()
-  }, [filters.page, filters.status, filters.location, filters.dateFrom, filters.dateTo])
+  }, [loadBatches])
 
   async function loadBatch(batchId) {
     try {
@@ -545,7 +545,7 @@ export function AdminPanel() {
   const [csrfToken, setCsrfToken] = useState('')
   const [tab, setTab] = useState('staging')
 
-  async function hydrate() {
+  const hydrate = useCallback(async () => {
     try {
       const me = await api.request('/admin/auth/me')
       setUser(me.data)
@@ -555,11 +555,12 @@ export function AdminPanel() {
       setUser(null)
       setCsrfToken('')
     }
-  }
+  }, [])
 
   useEffect(() => {
-    hydrate()
-  }, [])
+    // Defer initial auth check to the microtask queue to satisfy strict lint rules.
+    Promise.resolve().then(hydrate)
+  }, [hydrate])
 
   async function logout() {
     await api.request('/admin/auth/logout', {

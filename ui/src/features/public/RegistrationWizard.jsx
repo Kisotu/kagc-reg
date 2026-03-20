@@ -153,7 +153,7 @@ export function RegistrationWizard({ sessionId }) {
   const progress = useMemo(() => `${String(step).padStart(2, '0')} / 03`, [step])
 
   function next() {
-    const nextErrors = validateState(state, step + 1)
+    const nextErrors = validateState(state, step)
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length) return
     setStep((s) => Math.min(s + 1, 3))
