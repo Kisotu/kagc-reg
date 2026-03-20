@@ -1,5 +1,34 @@
 const db = require("./connection");
 
+function hasColumn(table, column) {
+  return db
+    .prepare(`PRAGMA table_info(${table})`)
+    .all()
+    .some((row) => row.name === column);
+}
+
+function migrateLocationsTable() {
+  if (!hasColumn("locations", "county")) {
+    db.exec("ALTER TABLE locations ADD COLUMN county TEXT");
+  }
+
+  if (!hasColumn("locations", "constituency")) {
+    db.exec("ALTER TABLE locations ADD COLUMN constituency TEXT");
+  }
+
+  if (!hasColumn("locations", "ward")) {
+    db.exec("ALTER TABLE locations ADD COLUMN ward TEXT");
+  }
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_locations_county ON locations(county);
+    CREATE INDEX IF NOT EXISTS idx_locations_constituency ON locations(constituency);
+    CREATE INDEX IF NOT EXISTS idx_locations_ward ON locations(ward);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_locations_unique_hierarchy
+    ON locations(county, constituency, ward);
+  `);
+}
+
 function runMigrations() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS admin_users (
@@ -117,6 +146,8 @@ function runMigrations() {
 
     INSERT OR IGNORE INTO member_sequence(id, last_number) VALUES (1, 0);
   `);
+
+  migrateLocationsTable();
 }
 
 module.exports = {

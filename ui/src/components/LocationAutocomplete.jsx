@@ -55,7 +55,7 @@ export function LocationAutocomplete({
             onClear()
           }
         }}
-        placeholder="Type at least 3 characters"
+        placeholder="Type county, constituency, or ward"
         className={`field ${error ? 'field-error' : ''}`}
       />
 
@@ -65,17 +65,17 @@ export function LocationAutocomplete({
         <div className="max-h-44 overflow-y-auto rounded-xl border border-[#e4beb466] bg-white">
           {options.map((item, idx) => (
             <button
-              key={`${item.location}-${item.subcounty}-${idx}`}
+              key={`${item.county || ''}-${item.constituency || ''}-${item.ward || item.location}-${idx}`}
               type="button"
               onClick={() => {
                 setOptions([])
-                setQuery(item.location)
-                onSelect(item.location, item.subcounty)
+                setQuery(item.label || item.location)
+                onSelect(item.location, item.subcounty, item.county)
               }}
-              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-[#eff4ff]"
+              className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-[#eff4ff]"
             >
-              <span className="font-semibold text-[#0b1c30]">{item.location}</span>
-              <span className="text-[#5b4139]">{item.subcounty}</span>
+              <span className="font-semibold text-[#0b1c30]">{item.label || item.location}</span>
+              <span className="text-xs text-[#5b4139]">{item.ward || item.location}</span>
             </button>
           ))}
         </div>
