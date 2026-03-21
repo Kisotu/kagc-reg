@@ -84,33 +84,77 @@ function Login({ onSuccess, loading, setLoading }) {
   }
 
   return (
-    <section className="panel mx-auto max-w-xl space-y-5 p-6 sm:p-8">
-      <h2 className="font-manrope text-3xl font-bold text-[#0b1c30]">Admin Login</h2>
-      <form className="space-y-4" onSubmit={submit}>
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-[#5b4139]">Username</label>
-          <input className="field" value={username} onChange={(e) => setUsername(e.target.value)} />
+    <section className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="panel overflow-hidden p-0">
+        <div className="h-full border border-[#e4beb44f] bg-[#0b1c30] p-6 text-white sm:p-8">
+          <p className="inline-flex items-center gap-2 rounded-full bg-[#ffffff1a] px-3 py-1 text-xs font-extrabold uppercase tracking-[0.1em]">
+            <span className="h-2 w-2 rounded-full bg-[#ffb692]" aria-hidden="true" />
+            Secure Console
+          </p>
+          <h2 className="mt-4 font-manrope text-3xl font-extrabold leading-tight sm:text-4xl">Admin Dashboard</h2>
+          <p className="mt-3 max-w-md text-sm text-[#d6e2f8]">
+            Manage registration approvals, monitor intake trends, and keep the member directory clean and up to date.
+          </p>
+
+          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <article className="rounded-xl border border-[#ffffff2a] bg-[#ffffff14] p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#ffcfba]">Security</p>
+              <p className="mt-1 text-sm font-bold">Role-based access</p>
+            </article>
+            <article className="rounded-xl border border-[#ffffff2a] bg-[#ffffff14] p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#ffcfba]">Audit</p>
+              <p className="mt-1 text-sm font-bold">All actions tracked</p>
+            </article>
+          </div>
         </div>
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-[#5b4139]">Password</label>
-          <input
-            type="password"
-            className="field"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+      </div>
+
+      <section className="panel space-y-5 p-6 sm:p-8">
+        <div>
+          <h3 className="font-manrope text-3xl font-bold text-[#0b1c30]">Sign In</h3>
+          <p className="mt-1 text-sm text-[#5b4139]">Use your admin credentials to continue.</p>
         </div>
 
-        <button className="btn-primary" type="submit" disabled={loading}>
-          {loading ? 'Signing in...' : 'Sign In'}
-        </button>
-      </form>
-      {error ? <p className="rounded-lg bg-[#ffdad6] p-3 text-sm font-semibold text-[#93000a]">{error}</p> : null}
+        <form className="space-y-4" onSubmit={submit}>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-[#5b4139]">Username</label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#5b4139]" aria-hidden="true">
+                <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
+                  <path d="M12 3.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Zm0 9.5c-4.07 0-7.25 2.26-7.25 5.15a.75.75 0 0 0 1.5 0c0-1.86 2.35-3.65 5.75-3.65s5.75 1.79 5.75 3.65a.75.75 0 0 0 1.5 0c0-2.89-3.18-5.15-7.25-5.15Z" />
+                </svg>
+              </span>
+              <input className="field pl-9" value={username} onChange={(e) => setUsername(e.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-[#5b4139]">Password</label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#5b4139]" aria-hidden="true">
+                <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
+                  <path d="M7.75 8V7a4.25 4.25 0 1 1 8.5 0v1h.5A2.25 2.25 0 0 1 19 10.25v8.5A2.25 2.25 0 0 1 16.75 21h-9.5A2.25 2.25 0 0 1 5 18.75v-8.5A2.25 2.25 0 0 1 7.25 8h.5Zm1.5 0h5.5V7a2.75 2.75 0 1 0-5.5 0v1Z" />
+                </svg>
+              </span>
+              <input
+                type="password"
+                className="field pl-9"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <button className="btn-primary" type="submit" disabled={loading}>
+            {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
+        {error ? <p className="rounded-lg bg-[#ffdad6] p-3 text-sm font-semibold text-[#93000a]">{error}</p> : null}
+      </section>
     </section>
   )
 }
 
-function KpiCard({ tone = 'neutral', eyebrow, label, value, helper }) {
+function KpiCard({ tone = 'neutral', eyebrow, label, value, helper, chartColor = '#163a6a', chartValues = [45, 55, 50, 68, 62, 74] }) {
   return (
     <article className={`kpi-card ${`kpi-${tone}`}`}>
       <div className="flex items-center justify-between gap-3">
@@ -120,6 +164,15 @@ function KpiCard({ tone = 'neutral', eyebrow, label, value, helper }) {
       <p className="kpi-value">{value}</p>
       <p className="kpi-label">{label}</p>
       <p className="kpi-helper">{helper}</p>
+      <div className="mt-3 flex h-8 items-end gap-1" aria-hidden="true">
+        {chartValues.map((point, idx) => (
+          <span
+            key={`${eyebrow}-${idx}`}
+            className="min-w-0 flex-1 rounded-sm"
+            style={{ height: `${Math.max(18, Math.min(100, point))}%`, background: chartColor, opacity: 0.15 + idx * 0.1 }}
+          />
+        ))}
+      </div>
     </article>
   )
 }
@@ -138,16 +191,21 @@ function DashboardSnapshot() {
   const totalMembers = Number(summary?.totalMembers || 0)
   const totalFamilies = Number(summary?.totalFamilies || 0)
   const pending = Number(summary?.pendingSubmissions || 0)
+  const processed = Math.max(totalMembers - pending, 0)
+  const fillRate = totalMembers > 0 ? Math.round((processed / totalMembers) * 100) : 0
   const queueState = pending > 100 ? 'High queue pressure' : pending > 30 ? 'Moderate queue pressure' : 'Queue healthy'
 
   return (
-    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <section className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <KpiCard
         tone="warm"
         eyebrow="Active Queue"
         value={summary ? pending : '-'}
         label="Pending Registrations"
         helper={queueState}
+        chartColor="#ae3100"
+        chartValues={[35, 42, 38, 56, 48, 66]}
       />
       <KpiCard
         tone="brand"
@@ -155,6 +213,8 @@ function DashboardSnapshot() {
         value={summary ? totalMembers : '-'}
         label="Total Members"
         helper="Registered and searchable profiles"
+        chartColor="#163a6a"
+        chartValues={[42, 48, 51, 56, 61, 68]}
       />
       <KpiCard
         tone="calm"
@@ -162,14 +222,33 @@ function DashboardSnapshot() {
         value={summary ? totalFamilies : '-'}
         label="Total Families"
         helper="Community groups in the directory"
+        chartColor="#0b7e45"
+        chartValues={[28, 33, 31, 42, 46, 54]}
       />
       <KpiCard
         tone="neutral"
         eyebrow="Intake"
-        value={summary ? `${Math.max(totalMembers - pending, 0)}` : '-'}
+        value={summary ? `${processed}` : '-'}
         label="Processed Members"
         helper="Already approved into directory"
+        chartColor="#6b3a92"
+        chartValues={[25, 34, 44, 49, 57, 64]}
       />
+      </div>
+
+      <article className="panel border border-[#bfd3f3] bg-[#f4f8ff] p-5">
+        <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <p className="font-manrope text-lg font-bold text-[#0b1c30]">Approval Throughput</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#5b4139]">Live KPI</p>
+        </div>
+        <div className="h-3 overflow-hidden rounded-full bg-[#d3e4fe]">
+          <div className="h-full bg-[#1f8a46]" style={{ width: `${fillRate}%` }} />
+        </div>
+        <div className="mt-2 flex items-center justify-between text-sm font-semibold text-[#163a6a]">
+          <span>{fillRate}% processed</span>
+          <span>{processed} / {totalMembers || 0}</span>
+        </div>
+      </article>
 
       {error ? <p className="sm:col-span-2 xl:col-span-4 rounded-lg bg-[#ffdad6] p-3 text-sm font-semibold text-[#93000a]">{error}</p> : null}
     </section>
@@ -889,8 +968,13 @@ export function AdminPanel() {
       <ConfirmationDialog state={confirmState} onClose={closeConfirmation} />
 
       <section className="space-y-4">
-        <div className="panel flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+        <div className="panel p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="inline-flex items-center gap-2 rounded-full bg-[#ffebe2] px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-[#9a2f00]">
+                <span className="h-2 w-2 rounded-full bg-[#ae3100]" aria-hidden="true" />
+                Admin Console
+              </p>
             <h2 className="font-manrope text-3xl font-extrabold text-[#0b1c30]">Admin Dashboard</h2>
             <p className="text-sm text-[#5b4139]">
               Signed in as {user.username} ({user.role})
@@ -899,11 +983,13 @@ export function AdminPanel() {
           <button className="btn-soft" type="button" onClick={logout}>
             Sign Out
           </button>
+          </div>
         </div>
 
         <DashboardSnapshot />
 
-        <div className="panel flex flex-wrap gap-2 p-3">
+        <div className="panel p-3">
+          <div className="flex gap-2 overflow-x-auto pb-1">
           <button
             type="button"
             className={`btn-tab ${tab === 'staging' ? 'is-active' : ''}`}
@@ -925,6 +1011,7 @@ export function AdminPanel() {
           >
             Analytics
           </button>
+          </div>
         </div>
 
         {tab === 'staging' ? (
