@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
-import { AGE_BRACKETS, GENDERS } from '../../constants'
-import { LocationAutocomplete } from '../../components/LocationAutocomplete'
+import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
+import { RegistrationStepOnePage } from './wizardPages/RegistrationStepOnePage'
+import { RegistrationStepTwoPage } from './wizardPages/RegistrationStepTwoPage'
+import { RegistrationStepThreePage } from './wizardPages/RegistrationStepThreePage'
 
 const LOCAL_PREFIX = 'kagc-local-draft-'
 
@@ -151,8 +152,6 @@ export function RegistrationWizard({ sessionId }) {
     return () => clearTimeout(timer)
   }, [localKey, sessionId, state, step])
 
-  const progress = useMemo(() => `${String(step).padStart(2, '0')} / 03`, [step])
-
   function next() {
     const nextErrors = validateState(state, step)
     setErrors(nextErrors)
@@ -245,409 +244,227 @@ export function RegistrationWizard({ sessionId }) {
     }
   }
 
-  const e = errors
+  function onSelectRegistrationType(registrationType) {
+    setState((current) => ({ ...current, registrationType }))
+  }
+
+  function onIndividualFieldChange(field, value) {
+    setState((current) => ({
+      ...current,
+      individual: { ...current.individual, [field]: value },
+    }))
+  }
+
+  function onIndividualLocationSelect(location, subcounty) {
+    setState((current) => ({
+      ...current,
+      individual: { ...current.individual, location, subcounty },
+    }))
+  }
+
+  function onIndividualLocationClear() {
+    setState((current) => ({
+      ...current,
+      individual: { ...current.individual, location: '', subcounty: '' },
+    }))
+  }
+
+  function onFamilyFieldChange(field, value) {
+    setState((current) => ({
+      ...current,
+      family: { ...current.family, [field]: value },
+    }))
+  }
+
+  function onFamilyLocationSelect(location, subcounty) {
+    setState((current) => ({
+      ...current,
+      family: { ...current.family, location, subcounty },
+    }))
+  }
+
+  function onFamilyLocationClear() {
+    setState((current) => ({
+      ...current,
+      family: { ...current.family, location: '', subcounty: '' },
+    }))
+  }
+
+  function onMemberDraftChange(field, value) {
+    setMemberDraft((current) => ({ ...current, [field]: value }))
+  }
+
+  function onMemberLocationSelect(location, subcounty) {
+    setMemberDraft((current) => ({ ...current, location, subcounty }))
+  }
+
+  function onMemberLocationClear() {
+    setMemberDraft((current) => ({ ...current, location: '', subcounty: '' }))
+  }
+
+  function onEditMember(index, member) {
+    setEditingIndex(index)
+    setMemberDraft(member)
+  }
+
+  function onRemoveMember(index) {
+    setState((current) => ({
+      ...current,
+      family: {
+        ...current.family,
+        members: current.family.members.filter((_, memberIndex) => memberIndex !== index),
+      },
+    }))
+  }
+
+  function onPrivacyChange(checked) {
+    setPrivacyConfirmed(checked)
+    setErrors((prevErrors) => {
+      const nextErrors = { ...prevErrors }
+      delete nextErrors.privacyConfirmed
+      return nextErrors
+    })
+  }
+
+  const stepItems = [
+    { step: 1, key: 'type', title: 'Registration Type', label: 'Choose Type' },
+    { step: 2, key: 'details', title: 'Member Details', label: 'Enter Details' },
+    { step: 3, key: 'review', title: 'Review and Submit', label: 'Confirm & Submit' },
+  ]
+  const currentStepMeta = stepItems[step - 1]
 
   return (
     <section className="animate-in space-y-6">
       <div className="panel p-6 sm:p-8">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="font-manrope text-4xl font-extrabold text-[#0b1c3033] sm:text-6xl">{progress}</p>
-            <h1 className="font-manrope text-2xl font-bold text-[#0b1c30] sm:text-3xl">
-              {step === 1 && 'Registration Type'}
-              {step === 2 && 'Member Details'}
-              {step === 3 && 'Review and Submit'}
-            </h1>
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#5b4139]">Step {step} of 3</p>
+            <h1 className="font-manrope text-2xl font-bold text-[#0b1c30] sm:text-3xl">{currentStepMeta.title}</h1>
           </div>
           <p className="text-sm text-[#5b4139] sm:text-right">Session: {sessionId.slice(0, 10)}...</p>
         </div>
 
-        <div className="h-2 w-full overflow-hidden rounded-full bg-[#d3e4fe]">
-          <div
-            className="h-full bg-[#ae3100] transition-[width] duration-500 ease-out"
-            style={{ width: `${(step / 3) * 100}%` }}
-          />
+        <div>
+          <div className="relative">
+            <span
+              className="absolute top-5 h-1 rounded-full bg-[#d3e4fe]"
+              style={{ left: 'calc(16.6667% + 1.25rem)', width: 'calc(33.3333% - 2.5rem)' }}
+              aria-hidden="true"
+            />
+            <span
+              className="absolute top-5 h-1 rounded-full bg-[#d3e4fe]"
+              style={{ left: 'calc(50% + 1.25rem)', width: 'calc(33.3333% - 2.5rem)' }}
+              aria-hidden="true"
+            />
+            <span
+              className={`absolute top-5 h-1 rounded-full ${step > 1 ? 'bg-[#1f8a46]' : 'bg-transparent'}`}
+              style={{ left: 'calc(16.6667% + 1.25rem)', width: 'calc(33.3333% - 2.5rem)' }}
+              aria-hidden="true"
+            />
+            <span
+              className={`absolute top-5 h-1 rounded-full ${step > 2 ? 'bg-[#1f8a46]' : 'bg-transparent'}`}
+              style={{ left: 'calc(50% + 1.25rem)', width: 'calc(33.3333% - 2.5rem)' }}
+              aria-hidden="true"
+            />
+
+            <div className="grid grid-cols-3">
+              {stepItems.map((item) => {
+                const isActive = step === item.step
+                const isDone = step > item.step
+
+                return (
+                  <div key={item.step} className="flex justify-center">
+                    <span
+                      className={`inline-flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300 ${
+                        isDone
+                          ? 'bg-[#1f8a46] text-white'
+                          : isActive
+                            ? 'bg-[#ae3100] text-white ring-4 ring-[#ffebe2]'
+                            : 'bg-[#d3e4fe] text-[#46648d]'
+                      }`}
+                      aria-hidden="true"
+                    >
+                      {isDone ? (
+                        <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
+                          <path d="M9.55 16.2 5.8 12.45a.75.75 0 1 0-1.06 1.06l4.28 4.29a.75.75 0 0 0 1.06 0l9.18-9.19a.75.75 0 1 0-1.06-1.06l-8.65 8.65Z" />
+                        </svg>
+                      ) : item.key === 'type' ? (
+                        <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
+                          <path d="M5.75 3.75A2.75 2.75 0 0 0 3 6.5v11A2.75 2.75 0 0 0 5.75 20.25h12.5A2.75 2.75 0 0 0 21 17.5v-11a2.75 2.75 0 0 0-2.75-2.75H5.75Zm1.5 4.5a.75.75 0 0 1 .75-.75h8a.75.75 0 0 1 0 1.5h-8a.75.75 0 0 1-.75-.75Zm0 4a.75.75 0 0 1 .75-.75h5a.75.75 0 1 1 0 1.5h-5a.75.75 0 0 1-.75-.75Z" />
+                        </svg>
+                      ) : item.key === 'details' ? (
+                        <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
+                          <path d="M12 3.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Zm0 9.5c-4.07 0-7.25 2.26-7.25 5.15a.75.75 0 0 0 1.5 0c0-1.86 2.35-3.65 5.75-3.65s5.75 1.79 5.75 3.65a.75.75 0 0 0 1.5 0c0-2.89-3.18-5.15-7.25-5.15Z" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
+                          <path d="M12 2.75A9.25 9.25 0 1 0 21.25 12 9.26 9.26 0 0 0 12 2.75Zm4.67 7.78-5.2 5.2a.75.75 0 0 1-1.06 0l-2.03-2.03a.75.75 0 0 1 1.06-1.06l1.5 1.5 4.67-4.67a.75.75 0 1 1 1.06 1.06Z" />
+                        </svg>
+                      )}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {stepItems.map((item) => {
+              const isActive = step === item.step
+              const isDone = step > item.step
+
+              return (
+                <p
+                  key={item.step}
+                  className={`text-center text-[11px] font-semibold uppercase tracking-[0.08em] sm:text-xs ${
+                    isDone ? 'text-[#1f8a46]' : isActive ? 'text-[#ae3100]' : 'text-[#5b4139]'
+                  }`}
+                >
+                  {item.label}
+                </p>
+              )
+            })}
+          </div>
         </div>
       </div>
 
-      {step === 1 && (
-        <div className="panel space-y-5 p-6 sm:p-8">
-          <h2 className="font-manrope text-2xl font-bold text-[#0b1c30]">Who is being registered?</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {[
-              { value: 'individual', title: 'Individual', description: 'Single member registration.' },
-              { value: 'family', title: 'Family', description: 'Register a household and all members.' },
-            ].map((choice) => (
-              <button
-                key={choice.value}
-                type="button"
-                onClick={() => setState((s) => ({ ...s, registrationType: choice.value }))}
-                className={`rounded-2xl px-5 py-6 text-left transition duration-200 ${
-                  state.registrationType === choice.value
-                    ? 'bg-[#eff4ff] ring-2 ring-[#ae3100]'
-                    : 'bg-white ring-1 ring-[#e4beb44f] hover:-translate-y-0.5 hover:bg-[#f8f9ff]'
-                }`}
-              >
-                <p className="font-manrope text-xl font-bold text-[#0b1c30]">{choice.title}</p>
-                <p className="mt-1 text-sm text-[#5b4139]">{choice.description}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {step === 1 ? (
+        <RegistrationStepOnePage
+          registrationType={state.registrationType}
+          onSelectRegistrationType={onSelectRegistrationType}
+        />
+      ) : null}
 
-      {step === 2 && state.registrationType === 'individual' && (
-        <div className="panel space-y-5 p-6 sm:p-8">
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
-              <label className="text-sm font-semibold text-[#5b4139]">Name *</label>
-              <input
-                className={`field ${e.individualName ? 'field-error' : ''}`}
-                value={state.individual.name}
-                onChange={(ev) =>
-                  setState((s) => ({
-                    ...s,
-                    individual: { ...s.individual, name: ev.target.value },
-                  }))
-                }
-              />
-              {e.individualName ? <p className="text-xs font-semibold text-[#ba1a1a]">{e.individualName}</p> : null}
-            </div>
+      {step === 2 ? (
+        <RegistrationStepTwoPage
+          state={state}
+          errors={errors}
+          memberDraft={memberDraft}
+          editingIndex={editingIndex}
+          onIndividualFieldChange={onIndividualFieldChange}
+          onIndividualLocationSelect={onIndividualLocationSelect}
+          onIndividualLocationClear={onIndividualLocationClear}
+          onFamilyFieldChange={onFamilyFieldChange}
+          onFamilyLocationSelect={onFamilyLocationSelect}
+          onFamilyLocationClear={onFamilyLocationClear}
+          onMemberDraftChange={onMemberDraftChange}
+          onMemberLocationSelect={onMemberLocationSelect}
+          onMemberLocationClear={onMemberLocationClear}
+          onSaveMember={saveMember}
+          onResetMemberDraft={resetMemberDraft}
+          onEditMember={onEditMember}
+          onRemoveMember={onRemoveMember}
+        />
+      ) : null}
 
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-[#5b4139]">Phone</label>
-              <input
-                className="field"
-                value={state.individual.phone}
-                onChange={(ev) =>
-                  setState((s) => ({
-                    ...s,
-                    individual: { ...s.individual, phone: ev.target.value },
-                  }))
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-[#5b4139]">Gender *</label>
-              <select
-                className={`field ${e.individualGender ? 'field-error' : ''}`}
-                value={state.individual.gender}
-                onChange={(ev) =>
-                  setState((s) => ({
-                    ...s,
-                    individual: { ...s.individual, gender: ev.target.value },
-                  }))
-                }
-              >
-                {GENDERS.map((gender) => (
-                  <option key={gender.value} value={gender.value}>
-                    {gender.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2 sm:col-span-2">
-              <label className="text-sm font-semibold text-[#5b4139]">Age Bracket *</label>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {AGE_BRACKETS.map((age) => (
-                  <button
-                    key={age}
-                    type="button"
-                    onClick={() =>
-                      setState((s) => ({
-                        ...s,
-                        individual: { ...s.individual, age_bracket: age },
-                      }))
-                    }
-                    className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-                      state.individual.age_bracket === age
-                        ? 'bg-[#ae3100] text-white'
-                        : 'bg-[#eff4ff] text-[#0b1c30] hover:bg-[#dce9ff]'
-                    }`}
-                  >
-                    {age}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="sm:col-span-2">
-              <LocationAutocomplete
-                label="Location"
-                location={state.individual.location}
-                subcounty={state.individual.subcounty}
-                onSelect={(location, subcounty) =>
-                  setState((s) => ({
-                    ...s,
-                    individual: { ...s.individual, location, subcounty },
-                  }))
-                }
-                onClear={() =>
-                  setState((s) => ({
-                    ...s,
-                    individual: { ...s.individual, location: '', subcounty: '' },
-                  }))
-                }
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {step === 2 && state.registrationType === 'family' && (
-        <div className="space-y-6">
-          <div className="panel space-y-5 p-6 sm:p-8">
-            <h2 className="font-manrope text-2xl font-bold text-[#0b1c30]">Family Foundation</h2>
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-[#5b4139]">Family Name *</label>
-                <input
-                  className={`field ${e.familyName ? 'field-error' : ''}`}
-                  value={state.family.family_name}
-                  onChange={(ev) =>
-                    setState((s) => ({
-                      ...s,
-                      family: { ...s.family, family_name: ev.target.value },
-                    }))
-                  }
-                />
-                {e.familyName ? <p className="text-xs font-semibold text-[#ba1a1a]">{e.familyName}</p> : null}
-              </div>
-
-              <LocationAutocomplete
-                label="Family Location"
-                location={state.family.location}
-                subcounty={state.family.subcounty}
-                onSelect={(location, subcounty) =>
-                  setState((s) => ({
-                    ...s,
-                    family: { ...s.family, location, subcounty },
-                  }))
-                }
-                onClear={() =>
-                  setState((s) => ({
-                    ...s,
-                    family: { ...s.family, location: '', subcounty: '' },
-                  }))
-                }
-              />
-            </div>
-          </div>
-
-          <div className="panel space-y-4 p-6 sm:p-8">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="font-manrope text-xl font-bold text-[#0b1c30]">Household Members</h3>
-                <p className="text-sm text-[#5b4139]">Add, edit, and remove members before submission.</p>
-              </div>
-              <span className="rounded-full bg-[#eff4ff] px-3 py-1 text-sm font-semibold text-[#5b4139]">
-                {state.family.members.length} members
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <div className="space-y-3 rounded-2xl bg-[#eff4ff] p-4">
-                <p className="font-manrope text-lg font-bold text-[#0b1c30]">
-                  {editingIndex >= 0 ? 'Edit Member' : 'New Member'}
-                </p>
-
-                <input
-                  className={`field ${e.memberName ? 'field-error' : ''}`}
-                  placeholder="Member name"
-                  value={memberDraft.name}
-                  onChange={(ev) => setMemberDraft((m) => ({ ...m, name: ev.target.value }))}
-                />
-
-                <input
-                  className="field"
-                  placeholder="Phone"
-                  value={memberDraft.phone}
-                  onChange={(ev) => setMemberDraft((m) => ({ ...m, phone: ev.target.value }))}
-                />
-
-                <select
-                  className={`field ${e.memberGender ? 'field-error' : ''}`}
-                  value={memberDraft.gender}
-                  onChange={(ev) => setMemberDraft((m) => ({ ...m, gender: ev.target.value }))}
-                >
-                  {GENDERS.map((gender) => (
-                    <option key={gender.value} value={gender.value}>
-                      {gender.label}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className={`field ${e.memberAge ? 'field-error' : ''}`}
-                  value={memberDraft.age_bracket}
-                  onChange={(ev) => setMemberDraft((m) => ({ ...m, age_bracket: ev.target.value }))}
-                >
-                  {AGE_BRACKETS.map((age) => (
-                    <option key={age} value={age}>
-                      {age}
-                    </option>
-                  ))}
-                </select>
-
-                <LocationAutocomplete
-                  label="Member Location"
-                  location={memberDraft.location}
-                  subcounty={memberDraft.subcounty}
-                  onSelect={(location, subcounty) => setMemberDraft((m) => ({ ...m, location, subcounty }))}
-                  onClear={() => setMemberDraft((m) => ({ ...m, location: '', subcounty: '' }))}
-                />
-
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <button type="button" className="btn-primary" onClick={saveMember}>
-                    {editingIndex >= 0 ? 'Update Member' : 'Add Family Member'}
-                  </button>
-                  {editingIndex >= 0 ? (
-                    <button type="button" className="btn-soft" onClick={resetMemberDraft}>
-                      Cancel
-                    </button>
-                  ) : null}
-                </div>
-                {e.familyMembers ? <p className="text-xs font-semibold text-[#ba1a1a]">{e.familyMembers}</p> : null}
-              </div>
-
-              <div className="space-y-3">
-                {state.family.members.length === 0 && (
-                  <div className="rounded-2xl bg-[#f8f9ff] p-4 text-sm text-[#5b4139]">
-                    No members added yet.
-                  </div>
-                )}
-
-                {state.family.members.map((member, idx) => (
-                  <article
-                    key={`${member.name}-${idx}`}
-                    className="rounded-2xl bg-white p-4 shadow-[0_8px_24px_rgba(11,28,48,0.08)] transition duration-200 hover:-translate-y-0.5"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-manrope text-lg font-bold text-[#0b1c30]">{member.name}</p>
-                        <p className="text-sm text-[#5b4139]">
-                          {member.gender} | {member.age_bracket}
-                        </p>
-                        <p className="text-sm text-[#5b4139]">{member.phone || 'No phone'}</p>
-                        <p className="text-sm text-[#5b4139]">
-                          {member.location || state.family.location || '-'} /{' '}
-                          {member.subcounty || state.family.subcounty || '-'}
-                        </p>
-                      </div>
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <button
-                          type="button"
-                          className="btn-soft"
-                          onClick={() => {
-                            setEditingIndex(idx)
-                            setMemberDraft(member)
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-soft"
-                          onClick={() =>
-                            setState((s) => ({
-                              ...s,
-                              family: {
-                                ...s.family,
-                                members: s.family.members.filter((_, memberIndex) => memberIndex !== idx),
-                              },
-                            }))
-                          }
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {step === 3 && (
-        <div className="panel space-y-5 p-6 sm:p-8">
-          <h2 className="font-manrope text-2xl font-bold text-[#0b1c30]">Review</h2>
-          {state.registrationType === 'individual' ? (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-xl bg-[#eff4ff] p-4">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#5b4139]">Type</p>
-                <p className="font-semibold">Individual</p>
-              </div>
-              <div className="rounded-xl bg-[#eff4ff] p-4">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#5b4139]">Name</p>
-                <p className="font-semibold">{state.individual.name}</p>
-              </div>
-              <div className="rounded-xl bg-[#eff4ff] p-4">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#5b4139]">Phone</p>
-                <p className="font-semibold">{state.individual.phone || '-'}</p>
-              </div>
-              <div className="rounded-xl bg-[#eff4ff] p-4">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#5b4139]">Location</p>
-                <p className="font-semibold">
-                  {state.individual.location || '-'} / {state.individual.subcounty || '-'}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="rounded-xl bg-[#eff4ff] p-4">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#5b4139]">Family Name</p>
-                <p className="font-semibold">{state.family.family_name}</p>
-              </div>
-              <div className="rounded-xl bg-[#eff4ff] p-4">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#5b4139]">Members</p>
-                <p className="font-semibold">{state.family.members.length}</p>
-              </div>
-              {state.family.members.map((member, idx) => (
-                <div
-                  key={`${member.name}-${idx}`}
-                  className="rounded-xl bg-white p-4 shadow-[0_8px_24px_rgba(11,28,48,0.08)] transition duration-200 hover:-translate-y-0.5"
-                >
-                  <p className="font-semibold text-[#0b1c30]">{member.name}</p>
-                  <p className="text-sm text-[#5b4139]">
-                    {member.gender} | {member.age_bracket} | {member.phone || '-'}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <section className="rounded-xl border border-[#e4beb44f] bg-[#eff4ff] p-5">
-            <h3 className="font-manrope text-lg font-bold text-[#0b1c30]">Privacy &amp; Approval Workflow</h3>
-            <p className="mt-2 text-sm leading-relaxed text-[#5b4139]">
-              By submitting this registration, you confirm you have read Karen AGC&apos;s privacy policy. Your
-              information is stored securely and can only be accessed by Karen AGC church administrators.
-              Submissions enter a pending review state and are approved by the ministry team before final
-              onboarding.
-            </p>
-            <label className="mt-4 flex items-start gap-3 text-sm font-semibold text-[#0b1c30]">
-              <input
-                type="checkbox"
-                className="mt-1 h-4 w-4 rounded border-[#8f7067] text-[#ae3100]"
-                checked={privacyConfirmed}
-                onChange={(ev) => {
-                  setPrivacyConfirmed(ev.target.checked)
-                  setErrors((prevErrors) => {
-                    const nextErrors = { ...prevErrors }
-                    delete nextErrors.privacyConfirmed
-                    return nextErrors
-                  })
-                }}
-              />
-              <span>I confirm that I have read Karen AGC&apos;s Privacy Policy.</span>
-            </label>
-            {e.privacyConfirmed ? <p className="mt-2 text-xs font-semibold text-[#ba1a1a]">{e.privacyConfirmed}</p> : null}
-          </section>
-        </div>
-      )}
+      {step === 3 ? (
+        <RegistrationStepThreePage
+          state={state}
+          privacyConfirmed={privacyConfirmed}
+          errors={errors}
+          onPrivacyChange={onPrivacyChange}
+        />
+      ) : null}
 
       <div className="panel flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <button type="button" className="btn-soft" onClick={prev} disabled={step === 1 || loading}>
