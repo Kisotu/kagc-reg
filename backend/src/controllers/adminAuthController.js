@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const asyncHandler = require("../utils/asyncHandler");
 const adminUserRepository = require("../repositories/adminUserRepository");
+const env = require("../config/env");
 
 const login = asyncHandler(async (req, res) => {
   const { username, password } = req.body;
@@ -43,7 +44,12 @@ const me = asyncHandler(async (req, res) => {
 
 const logout = asyncHandler(async (req, res) => {
   req.session.destroy(() => {
-    res.clearCookie("kagc.sid");
+    res.clearCookie("kagc.sid", {
+      httpOnly: true,
+      sameSite: env.sessionCookieSameSite,
+      secure: env.sessionCookieSecure,
+      path: "/"
+    });
     res.status(204).send();
   });
 });

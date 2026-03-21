@@ -15,6 +15,27 @@ const viewController = require("./controllers/viewController");
 
 const app = express();
 
+const corsOptions = {
+  origin(origin, callback) {
+    // Allow non-browser requests (curl, health checks) that send no Origin header.
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (!env.corsAllowedOrigins.length) {
+      if (env.nodeEnv !== "production") {
+        return callback(null, true);
+      }
+
+      return callback(new Error("CORS origin not allowed"));
+    }
+
+    const allowed = env.corsAllowedOrigins.includes(origin);
+    return callback(allowed ? null : new Error("CORS origin not allowed"), allowed);
+  },
+  credentials: true
+};
+
 if (env.trustProxy) {
   app.set("trust proxy", 1);
 }
@@ -29,10 +50,7 @@ app.use(
 );
 
 app.use(
-  cors({
-    origin: true,
-    credentials: true
-  })
+  cors(corsOptions)
 );
 
 app.use(express.json({ limit: "1mb" }));
@@ -52,8 +70,8 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      sameSite: "lax",
-      secure: env.nodeEnv === "production",
+      sameSite: env.sessionCookieSameSite,
+      secure: env.sessionCookieSecure,
       maxAge: 1000 * 60 * 60 * 12
     }
   })
