@@ -1,4 +1,13 @@
-const API_BASE = import.meta.env.VITE_API_BASE || '/api'
+function normalizeApiBase(rawValue) {
+  if (!rawValue) return '/api'
+
+  const trimmed = String(rawValue).trim().replace(/\/+$/, '')
+  if (!trimmed) return '/api'
+
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`
+}
+
+const API_BASE = normalizeApiBase(import.meta.env.VITE_API_BASE)
 
 function toQuery(params = {}) {
   const search = new URLSearchParams()
