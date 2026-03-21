@@ -2,7 +2,7 @@ import { AdminPanel } from './features/admin/AdminPanel'
 
 export function AdminApp() {
   return (
-    <div className="page-shell min-h-screen text-slate-900">
+    <div className="page-shell min-h-screen font-body text-slate-900">
       <div className="page-orb page-orb-primary" aria-hidden="true" />
       <div className="page-orb page-orb-secondary" aria-hidden="true" />
 
