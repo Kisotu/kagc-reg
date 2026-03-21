@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
-import { RegistrationStepOnePage } from './wizardPages/RegistrationStepOnePage'
+import { RegistrationStepOnePage, RegistrationWelcomeCard } from './wizardPages/RegistrationStepOnePage'
 import { RegistrationStepTwoPage } from './wizardPages/RegistrationStepTwoPage'
 import { RegistrationStepThreePage } from './wizardPages/RegistrationStepThreePage'
 
@@ -335,6 +335,8 @@ export function RegistrationWizard({ sessionId }) {
 
   return (
     <section className="animate-in space-y-6">
+      {step === 1 ? <RegistrationWelcomeCard /> : null}
+
       <div className="panel p-6 sm:p-8">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
