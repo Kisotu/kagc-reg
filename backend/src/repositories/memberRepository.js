@@ -131,6 +131,24 @@ function analyticsByLocation() {
     .all();
 }
 
+function analyticsByCounty() {
+  return db
+    .prepare(
+      `
+      SELECT
+        COALESCE(l.county, 'Unknown') AS county,
+        COUNT(1) AS total
+      FROM members m
+      LEFT JOIN locations l
+        ON lower(COALESCE(l.ward, l.location, '')) = lower(COALESCE(m.location, ''))
+        AND lower(COALESCE(l.constituency, l.subcounty, '')) = lower(COALESCE(m.subcounty, ''))
+      GROUP BY COALESCE(l.county, 'Unknown')
+      ORDER BY total DESC, county ASC
+    `
+    )
+    .all();
+}
+
 function analyticsByAgeBracket() {
   return db
     .prepare(
@@ -152,5 +170,6 @@ module.exports = {
   membersByFamily,
   analyticsSummary,
   analyticsByLocation,
+  analyticsByCounty,
   analyticsByAgeBracket
 };

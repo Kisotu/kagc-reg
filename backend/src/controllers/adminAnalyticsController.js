@@ -9,6 +9,10 @@ const byLocation = asyncHandler(async (req, res) => {
   res.json({ data: memberRepository.analyticsByLocation() });
 });
 
+const byCounty = asyncHandler(async (req, res) => {
+  res.json({ data: memberRepository.analyticsByCounty() });
+});
+
 const byAgeBracket = asyncHandler(async (req, res) => {
   res.json({ data: memberRepository.analyticsByAgeBracket() });
 });
@@ -16,5 +20,6 @@ const byAgeBracket = asyncHandler(async (req, res) => {
 module.exports = {
   summary,
   byLocation,
+  byCounty,
   byAgeBracket
 };
