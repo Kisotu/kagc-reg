@@ -1,8 +1,10 @@
 backend/node_modules/
 backend/.env
+backend/.env.development
 backend/data/*.sqlite
 backend/data/*.sqlite-shm
 backend/data/*.sqlite-wal
 backend/npm-debug.log*
 npm-debug.log*
 instructions
+backend/DEPLOY_UBUNTU.md
