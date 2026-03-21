@@ -1,0 +1,19 @@
+[Unit]
+Description=KAGC Registration Backend
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/kagc-reg/backend
+Environment=NODE_ENV=production
+Environment=NODE_OPTIONS=--max-old-space-size=256
+ExecStart=/usr/bin/node /opt/kagc-reg/backend/src/server.js
+Restart=always
+RestartSec=3
+KillSignal=SIGINT
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target
