@@ -1,6 +1,64 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AGE_BRACKETS, STAGING_STATUS } from '../../constants'
 import { api } from '../../lib/api'
+
+function NotificationStack({ notifications, onDismiss }) {
+  return (
+    <div className="pointer-events-none fixed right-4 top-4 z-50 flex w-[min(92vw,24rem)] flex-col gap-2">
+      {notifications.map((item) => (
+        <div
+          key={item.id}
+          className={`pointer-events-auto rounded-xl border px-4 py-3 shadow-[0_14px_30px_rgba(11,28,48,0.18)] ${
+            item.type === 'success'
+              ? 'border-[#1f8a46] bg-[#d9f7e1] text-[#0b4d24]'
+              : item.type === 'danger'
+                ? 'border-[#a42f2f] bg-[#ffe0dc] text-[#7d1919]'
+                : 'border-[#2a5a9f] bg-[#deecff] text-[#163a6a]'
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="font-manrope text-sm font-extrabold">{item.title}</p>
+              <p className="text-sm font-semibold">{item.message}</p>
+            </div>
+            <button type="button" className="btn-notification-close" onClick={() => onDismiss(item.id)}>
+              Close
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ConfirmationDialog({ state, onClose }) {
+  if (!state) return null
+
+  return (
+    <div className="fixed inset-0 z-40 grid place-items-center bg-[#0b1c3080] px-4">
+      <div className="panel w-full max-w-md space-y-4 p-5">
+        <div>
+          <h3 className="font-manrope text-2xl font-bold text-[#0b1c30]">{state.title}</h3>
+          <p className="mt-1 text-sm font-semibold text-[#5b4139]">{state.message}</p>
+        </div>
+        <div className="flex flex-wrap justify-end gap-2">
+          <button type="button" className="btn-soft" onClick={() => onClose(false)}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className={state.variant === 'danger' ? 'btn-danger' : state.variant === 'warning' ? 'btn-warning' : 'btn-success'}
+            onClick={() => onClose(true)}
+          >
+            {state.confirmText || 'Confirm'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function Login({ onSuccess, loading, setLoading }) {
   const [username, setUsername] = useState('')
@@ -52,7 +110,73 @@ function Login({ onSuccess, loading, setLoading }) {
   )
 }
 
-function StagingReview({ csrfToken }) {
+function KpiCard({ tone = 'neutral', eyebrow, label, value, helper }) {
+  return (
+    <article className={`kpi-card ${`kpi-${tone}`}`}>
+      <div className="flex items-center justify-between gap-3">
+        <span className="kpi-eyebrow">{eyebrow}</span>
+        <span className="kpi-dot" aria-hidden="true" />
+      </div>
+      <p className="kpi-value">{value}</p>
+      <p className="kpi-label">{label}</p>
+      <p className="kpi-helper">{helper}</p>
+    </article>
+  )
+}
+
+function DashboardSnapshot() {
+  const [summary, setSummary] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api
+      .request('/admin/analytics/summary')
+      .then((res) => setSummary(res.data || null))
+      .catch((e) => setError(e.message))
+  }, [])
+
+  const totalMembers = Number(summary?.totalMembers || 0)
+  const totalFamilies = Number(summary?.totalFamilies || 0)
+  const pending = Number(summary?.pendingSubmissions || 0)
+  const queueState = pending > 100 ? 'High queue pressure' : pending > 30 ? 'Moderate queue pressure' : 'Queue healthy'
+
+  return (
+    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <KpiCard
+        tone="warm"
+        eyebrow="Active Queue"
+        value={summary ? pending : '-'}
+        label="Pending Registrations"
+        helper={queueState}
+      />
+      <KpiCard
+        tone="brand"
+        eyebrow="Directory"
+        value={summary ? totalMembers : '-'}
+        label="Total Members"
+        helper="Registered and searchable profiles"
+      />
+      <KpiCard
+        tone="calm"
+        eyebrow="Households"
+        value={summary ? totalFamilies : '-'}
+        label="Total Families"
+        helper="Community groups in the directory"
+      />
+      <KpiCard
+        tone="neutral"
+        eyebrow="Intake"
+        value={summary ? `${Math.max(totalMembers - pending, 0)}` : '-'}
+        label="Processed Members"
+        helper="Already approved into directory"
+      />
+
+      {error ? <p className="sm:col-span-2 xl:col-span-4 rounded-lg bg-[#ffdad6] p-3 text-sm font-semibold text-[#93000a]">{error}</p> : null}
+    </section>
+  )
+}
+
+function StagingReview({ csrfToken, onNotify, onConfirm }) {
   const [filters, setFilters] = useState({ status: 'pending', location: '', dateFrom: '', dateTo: '', page: 1 })
   const [batches, setBatches] = useState([])
   const [selectedBatch, setSelectedBatch] = useState(null)
@@ -61,6 +185,7 @@ function StagingReview({ csrfToken }) {
   const [mergeTarget, setMergeTarget] = useState({})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const selectedBatchRef = useRef(null)
 
   const loadBatches = useCallback(async () => {
     try {
@@ -77,6 +202,27 @@ function StagingReview({ csrfToken }) {
     loadBatches()
   }, [loadBatches])
 
+  useEffect(() => {
+    if (!selectedBatch) return undefined
+
+    const handleOutsidePointer = (event) => {
+      const panel = selectedBatchRef.current
+      if (!panel) return
+      if (!panel.contains(event.target)) {
+        setSelectedBatch(null)
+        setSelectedDuplicates([])
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutsidePointer)
+    document.addEventListener('touchstart', handleOutsidePointer)
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsidePointer)
+      document.removeEventListener('touchstart', handleOutsidePointer)
+    }
+  }, [selectedBatch])
+
   async function loadBatch(batchId) {
     try {
       const out = await api.request(`/admin/staging/batches/${batchId}`)
@@ -92,13 +238,36 @@ function StagingReview({ csrfToken }) {
       const out = await api.request(`/admin/staging/members/${memberId}/duplicates`)
       setSelectedDuplicates(out.data || [])
       setMergeTarget((m) => ({ ...m, [memberId]: out.data?.[0]?.id || '' }))
+      onNotify('info', 'Duplicate Check Complete', `Loaded potential duplicates for member #${memberId}.`)
     } catch (e) {
       setError(e.message)
+      onNotify('danger', 'Duplicate Check Failed', e.message)
     }
   }
 
   async function action(memberId, type) {
     try {
+      const isConfirmed = await onConfirm({
+        title:
+          type === 'approve'
+            ? 'Approve this member?'
+            : type === 'reject'
+              ? 'Reject this member?'
+              : 'Merge this member into an existing profile?',
+        message:
+          type === 'approve'
+            ? 'This will approve the member and finalize the registration.'
+            : type === 'reject'
+              ? 'This will reject the member submission and keep an audit trail.'
+              : 'This will merge this pending member with an existing member record.',
+        confirmText: type === 'merge' ? 'Merge Member' : type === 'reject' ? 'Reject Member' : 'Approve Member',
+        variant: type === 'reject' ? 'danger' : type === 'merge' ? 'warning' : 'success',
+      })
+
+      if (!isConfirmed) {
+        return
+      }
+
       setBusy(true)
       setError('')
 
@@ -107,6 +276,7 @@ function StagingReview({ csrfToken }) {
           method: 'POST',
           headers: { 'x-csrf-token': csrfToken },
         })
+        onNotify('success', 'Member Approved', `Member #${memberId} was approved successfully.`)
       }
 
       if (type === 'reject') {
@@ -115,6 +285,7 @@ function StagingReview({ csrfToken }) {
           headers: { 'x-csrf-token': csrfToken },
           body: JSON.stringify({ reason: rejectReason[memberId] || 'Rejected by admin' }),
         })
+        onNotify('danger', 'Member Rejected', `Member #${memberId} was rejected.`)
       }
 
       if (type === 'merge') {
@@ -123,14 +294,15 @@ function StagingReview({ csrfToken }) {
           headers: { 'x-csrf-token': csrfToken },
           body: JSON.stringify({ targetMemberId: Number(mergeTarget[memberId]) }),
         })
+        onNotify('success', 'Members Merged', `Member #${memberId} was merged into #${mergeTarget[memberId]}.`)
       }
 
-      if (selectedBatch) {
-        await loadBatch(selectedBatch.id)
-      }
       await loadBatches()
+      setSelectedBatch(null)
+      setSelectedDuplicates([])
     } catch (e) {
       setError(e.message)
+      onNotify('danger', 'Action Failed', e.message)
     } finally {
       setBusy(false)
     }
@@ -170,7 +342,11 @@ function StagingReview({ csrfToken }) {
             value={filters.dateTo}
             onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value, page: 1 }))}
           />
-          <button type="button" className="btn-soft" onClick={loadBatches}>
+          <button
+            type="button"
+            className="btn-soft"
+            onClick={loadBatches}
+          >
             Refresh
           </button>
         </div>
@@ -216,14 +392,26 @@ function StagingReview({ csrfToken }) {
       </div>
 
       {selectedBatch ? (
-        <div className="panel space-y-4 p-5">
+        <div ref={selectedBatchRef} className="panel space-y-4 p-5">
           <div className="flex items-center justify-between">
             <h4 className="font-manrope text-xl font-bold">
               Batch #{selectedBatch.id} {selectedBatch.family_name ? `- ${selectedBatch.family_name}` : ''}
             </h4>
-            <span className="rounded-full bg-[#eff4ff] px-3 py-1 text-sm font-semibold capitalize">
-              {selectedBatch.status}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-[#eff4ff] px-3 py-1 text-sm font-semibold capitalize">
+                {selectedBatch.status}
+              </span>
+              <button
+                type="button"
+                className="btn-soft"
+                onClick={() => {
+                  setSelectedBatch(null)
+                  setSelectedDuplicates([])
+                }}
+              >
+                Close
+              </button>
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -251,7 +439,7 @@ function StagingReview({ csrfToken }) {
                     </button>
                     <button
                       type="button"
-                      className="btn-soft"
+                      className="btn-success"
                       disabled={busy || member.status !== 'pending'}
                       onClick={() => action(member.id, 'approve')}
                     >
@@ -259,7 +447,7 @@ function StagingReview({ csrfToken }) {
                     </button>
                     <button
                       type="button"
-                      className="btn-soft"
+                      className="btn-danger"
                       disabled={busy || member.status !== 'pending'}
                       onClick={() => action(member.id, 'reject')}
                     >
@@ -284,7 +472,7 @@ function StagingReview({ csrfToken }) {
                   />
                   <button
                     type="button"
-                    className="btn-soft"
+                    className="btn-warning"
                     disabled={busy || !mergeTarget[member.id] || member.status !== 'pending'}
                     onClick={() => action(member.id, 'merge')}
                   >
@@ -337,6 +525,7 @@ function MembersExplorer() {
   const [rows, setRows] = useState([])
   const [familyRows, setFamilyRows] = useState([])
   const [error, setError] = useState('')
+  const familyPanelRef = useRef(null)
 
   const queryString = useMemo(() => api.toQuery(query), [query])
 
@@ -346,6 +535,26 @@ function MembersExplorer() {
       .then((out) => setRows(out.data || []))
       .catch((e) => setError(e.message))
   }, [queryString])
+
+  useEffect(() => {
+    if (familyRows.length === 0) return undefined
+
+    const handleOutsidePointer = (event) => {
+      const panel = familyPanelRef.current
+      if (!panel) return
+      if (!panel.contains(event.target)) {
+        setFamilyRows([])
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutsidePointer)
+    document.addEventListener('touchstart', handleOutsidePointer)
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsidePointer)
+      document.removeEventListener('touchstart', handleOutsidePointer)
+    }
+  }, [familyRows.length])
 
   function exportCsv() {
     const url = `${api.base}/admin/members/export.csv${queryString}`
@@ -435,8 +644,13 @@ function MembersExplorer() {
       </div>
 
       {familyRows.length > 0 ? (
-        <div className="panel p-5">
-          <h4 className="mb-3 font-manrope text-xl font-bold">Family Group</h4>
+        <div ref={familyPanelRef} className="panel p-5">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h4 className="font-manrope text-xl font-bold">Family Group</h4>
+            <button type="button" className="btn-soft" onClick={() => setFamilyRows([])}>
+              Close
+            </button>
+          </div>
           <ul className="space-y-2">
             {familyRows.map((member) => (
               <li key={member.id} className="rounded-lg bg-[#eff4ff] p-3 text-sm">
@@ -454,82 +668,132 @@ function MembersExplorer() {
 
 function AnalyticsView() {
   const [summary, setSummary] = useState(null)
-  const [byLocation, setByLocation] = useState([])
+  const [byCounty, setByCounty] = useState([])
   const [byAge, setByAge] = useState([])
   const [error, setError] = useState('')
 
   useEffect(() => {
     Promise.all([
       api.request('/admin/analytics/summary'),
-      api.request('/admin/analytics/by-location'),
+      api.request('/admin/analytics/by-county'),
       api.request('/admin/analytics/by-age-bracket'),
     ])
-      .then(([summaryRes, locationRes, ageRes]) => {
+      .then(([summaryRes, countyRes, ageRes]) => {
         setSummary(summaryRes.data)
-        setByLocation(locationRes.data || [])
+        setByCounty(countyRes.data || [])
         setByAge(ageRes.data || [])
       })
       .catch((e) => setError(e.message))
   }, [])
 
-  const maxLocation = Math.max(...byLocation.map((item) => Number(item.total)), 1)
+  const maxCounty = Math.max(...byCounty.map((item) => Number(item.total)), 1)
   const maxAge = Math.max(...byAge.map((item) => Number(item.total)), 1)
+  const totalCountyMembers = byCounty.reduce((sum, item) => sum + Number(item.total || 0), 0)
+  const totalAgeMembers = byAge.reduce((sum, item) => sum + Number(item.total || 0), 0)
+  const rankedCounties = [...byCounty].sort((a, b) => Number(b.total || 0) - Number(a.total || 0))
+  const rankedAges = [...byAge].sort((a, b) => Number(b.total || 0) - Number(a.total || 0))
+  const agePalette = ['#1b4e91', '#ae3100', '#0b7e45', '#754706', '#6b3a92', '#256f73', '#7d1919']
 
   return (
     <section className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="panel p-5">
-          <p className="text-sm text-[#5b4139]">Total Members</p>
-          <p className="font-manrope text-3xl font-extrabold text-[#0b1c30]">{summary?.totalMembers ?? '-'}</p>
-        </div>
-        <div className="panel p-5">
-          <p className="text-sm text-[#5b4139]">Total Families</p>
-          <p className="font-manrope text-3xl font-extrabold text-[#0b1c30]">{summary?.totalFamilies ?? '-'}</p>
-        </div>
-        <div className="panel p-5">
-          <p className="text-sm text-[#5b4139]">Pending Submissions</p>
-          <p className="font-manrope text-3xl font-extrabold text-[#0b1c30]">{summary?.pendingSubmissions ?? '-'}</p>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="panel p-5">
-          <h4 className="mb-3 font-manrope text-xl font-bold">Members by Location</h4>
-          <ul className="space-y-2">
-            {byLocation.map((entry) => (
-              <li key={`${entry.location}-${entry.total}`}>
-                <div className="mb-1 flex justify-between text-sm">
-                  <span>{entry.location || 'Unknown'}</span>
-                  <span>{entry.total}</span>
-                </div>
-                <div className="h-2 rounded-full bg-[#d3e4fe]">
-                  <div
-                    className="h-2 rounded-full bg-[linear-gradient(120deg,#ae3100,#fe5b24)]"
-                    style={{ width: `${(Number(entry.total) / maxLocation) * 100}%` }}
-                  />
-                </div>
-              </li>
-            ))}
+        <div className="panel analytic-card p-5">
+          <div className="mb-3 flex items-end justify-between">
+            <h4 className="font-manrope text-xl font-bold">Members by County</h4>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#5b4139]">Distribution</p>
+          </div>
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-xl bg-[#eff4ff] px-3 py-2">
+            <p className="text-sm font-semibold text-[#5b4139]">Total in county analytics</p>
+            <span className="rounded-full bg-white px-3 py-1 text-sm font-extrabold text-[#0b1c30]">
+              {totalCountyMembers}
+            </span>
+          </div>
+
+          <ul className="space-y-3">
+            {rankedCounties.map((entry, idx) => {
+              const total = Number(entry.total || 0)
+              const pct = totalCountyMembers > 0 ? (total / totalCountyMembers) * 100 : 0
+              const relative = (total / maxCounty) * 100
+
+              return (
+                <li key={`${entry.county}-${entry.total}`} className="analytic-row">
+                  <div className="analytic-row-top">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="analytic-rank">{idx + 1}</span>
+                      <span className="truncate font-semibold text-[#0b1c30]">{entry.county || 'Unknown'}</span>
+                    </div>
+                    <span className="analytic-count">{total}</span>
+                  </div>
+
+                  <div className="analytic-track" aria-hidden="true">
+                    <div className="analytic-fill analytic-fill-location" style={{ width: `${relative}%` }} />
+                  </div>
+
+                  <div className="mt-1 flex justify-end text-xs font-semibold text-[#5b4139]">{pct.toFixed(1)}% of all members</div>
+                </li>
+              )
+            })}
+            {rankedCounties.length === 0 ? (
+              <li className="rounded-lg bg-[#eff4ff] p-3 text-sm font-semibold text-[#5b4139]">No county data available.</li>
+            ) : null}
           </ul>
         </div>
 
-        <div className="panel p-5">
-          <h4 className="mb-3 font-manrope text-xl font-bold">Members by Age Bracket</h4>
-          <ul className="space-y-2">
-            {byAge.map((entry) => (
-              <li key={`${entry.age_bracket}-${entry.total}`}>
-                <div className="mb-1 flex justify-between text-sm">
-                  <span>{entry.age_bracket}</span>
-                  <span>{entry.total}</span>
-                </div>
-                <div className="h-2 rounded-full bg-[#d3e4fe]">
+        <div className="panel analytic-card p-5">
+          <div className="mb-3 flex items-end justify-between">
+            <h4 className="font-manrope text-xl font-bold">Members by Age Bracket</h4>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#5b4139]">Demographics</p>
+          </div>
+
+          <div className="mb-4">
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span className="font-semibold text-[#5b4139]">Population spread</span>
+              <span className="font-extrabold text-[#0b1c30]">{totalAgeMembers} members</span>
+            </div>
+            <div className="analytic-segment-track" aria-hidden="true">
+              {rankedAges.map((entry, idx) => {
+                const total = Number(entry.total || 0)
+                const width = totalAgeMembers > 0 ? (total / totalAgeMembers) * 100 : 0
+                return (
                   <div
-                    className="h-2 rounded-full bg-[linear-gradient(120deg,#0b1c30,#5b4139)]"
-                    style={{ width: `${(Number(entry.total) / maxAge) * 100}%` }}
+                    key={`${entry.age_bracket}-${entry.total}-segment`}
+                    className="analytic-segment"
+                    style={{ width: `${width}%`, background: agePalette[idx % agePalette.length] }}
+                    title={`${entry.age_bracket}: ${total}`}
                   />
-                </div>
-              </li>
-            ))}
+                )
+              })}
+            </div>
+          </div>
+
+          <ul className="space-y-3">
+            {rankedAges.map((entry, idx) => {
+              const total = Number(entry.total || 0)
+              const pct = totalAgeMembers > 0 ? (total / totalAgeMembers) * 100 : 0
+              const relative = (total / maxAge) * 100
+              const chipColor = agePalette[idx % agePalette.length]
+
+              return (
+                <li key={`${entry.age_bracket}-${entry.total}`} className="analytic-row">
+                  <div className="analytic-row-top">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="analytic-swatch" style={{ background: chipColor }} aria-hidden="true" />
+                      <span className="truncate font-semibold text-[#0b1c30]">{entry.age_bracket}</span>
+                    </div>
+                    <span className="analytic-count">{total}</span>
+                  </div>
+
+                  <div className="analytic-track" aria-hidden="true">
+                    <div className="analytic-fill" style={{ width: `${relative}%`, background: chipColor }} />
+                  </div>
+
+                  <div className="mt-1 flex justify-end text-xs font-semibold text-[#5b4139]">{pct.toFixed(1)}% share</div>
+                </li>
+              )
+            })}
+            {rankedAges.length === 0 ? (
+              <li className="rounded-lg bg-[#eff4ff] p-3 text-sm font-semibold text-[#5b4139]">No age bracket data available.</li>
+            ) : null}
           </ul>
         </div>
       </div>
@@ -544,6 +808,35 @@ export function AdminPanel() {
   const [user, setUser] = useState(null)
   const [csrfToken, setCsrfToken] = useState('')
   const [tab, setTab] = useState('staging')
+  const [confirmState, setConfirmState] = useState(null)
+  const [notifications, setNotifications] = useState([])
+
+  const notify = useCallback((type, title, message) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    setNotifications((items) => [...items, { id, type, title, message }])
+    window.setTimeout(() => {
+      setNotifications((items) => items.filter((item) => item.id !== id))
+    }, 4200)
+  }, [])
+
+  const requestConfirmation = useCallback(
+    ({ title, message, confirmText, variant }) =>
+      new Promise((resolve) => {
+        setConfirmState({ title, message, confirmText, variant, resolve })
+      }),
+    [],
+  )
+
+  const closeConfirmation = useCallback((confirmed) => {
+    setConfirmState((state) => {
+      state?.resolve(Boolean(confirmed))
+      return null
+    })
+  }, [])
+
+  const dismissNotification = useCallback((id) => {
+    setNotifications((items) => items.filter((item) => item.id !== id))
+  }, [])
 
   const hydrate = useCallback(async () => {
     try {
@@ -563,12 +856,27 @@ export function AdminPanel() {
   }, [hydrate])
 
   async function logout() {
-    await api.request('/admin/auth/logout', {
-      method: 'POST',
-      headers: { 'x-csrf-token': csrfToken },
+    const confirmed = await requestConfirmation({
+      title: 'Sign out now?',
+      message: 'You will need to sign back in to continue admin actions.',
+      confirmText: 'Sign Out',
+      variant: 'warning',
     })
-    setUser(null)
-    setCsrfToken('')
+
+    if (!confirmed) {
+      return
+    }
+
+    try {
+      await api.request('/admin/auth/logout', {
+        method: 'POST',
+        headers: { 'x-csrf-token': csrfToken },
+      })
+      setUser(null)
+      setCsrfToken('')
+    } catch {
+      // Keep sign-out failures in-place by preserving the existing authenticated state.
+    }
   }
 
   if (!user) {
@@ -576,52 +884,55 @@ export function AdminPanel() {
   }
 
   return (
-    <section className="space-y-4">
-      <div className="panel flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="font-manrope text-3xl font-extrabold text-[#0b1c30]">Admin Dashboard</h2>
-          <p className="text-sm text-[#5b4139]">
-            Signed in as {user.username} ({user.role})
-          </p>
+    <>
+      <NotificationStack notifications={notifications} onDismiss={dismissNotification} />
+      <ConfirmationDialog state={confirmState} onClose={closeConfirmation} />
+
+      <section className="space-y-4">
+        <div className="panel flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-manrope text-3xl font-extrabold text-[#0b1c30]">Admin Dashboard</h2>
+            <p className="text-sm text-[#5b4139]">
+              Signed in as {user.username} ({user.role})
+            </p>
+          </div>
+          <button className="btn-soft" type="button" onClick={logout}>
+            Sign Out
+          </button>
         </div>
-        <button className="btn-soft" type="button" onClick={logout}>
-          Sign Out
-        </button>
-      </div>
 
-      <div className="panel flex flex-wrap gap-2 p-3">
-        <button
-          type="button"
-          className={`rounded-xl px-4 py-2 text-sm font-semibold ${
-            tab === 'staging' ? 'bg-[#ae3100] text-white' : 'bg-[#eff4ff] text-[#0b1c30]'
-          }`}
-          onClick={() => setTab('staging')}
-        >
-          Staging Review
-        </button>
-        <button
-          type="button"
-          className={`rounded-xl px-4 py-2 text-sm font-semibold ${
-            tab === 'members' ? 'bg-[#ae3100] text-white' : 'bg-[#eff4ff] text-[#0b1c30]'
-          }`}
-          onClick={() => setTab('members')}
-        >
-          Members
-        </button>
-        <button
-          type="button"
-          className={`rounded-xl px-4 py-2 text-sm font-semibold ${
-            tab === 'analytics' ? 'bg-[#ae3100] text-white' : 'bg-[#eff4ff] text-[#0b1c30]'
-          }`}
-          onClick={() => setTab('analytics')}
-        >
-          Analytics
-        </button>
-      </div>
+        <DashboardSnapshot />
 
-      {tab === 'staging' ? <StagingReview csrfToken={csrfToken} /> : null}
-      {tab === 'members' ? <MembersExplorer /> : null}
-      {tab === 'analytics' ? <AnalyticsView /> : null}
-    </section>
+        <div className="panel flex flex-wrap gap-2 p-3">
+          <button
+            type="button"
+            className={`btn-tab ${tab === 'staging' ? 'is-active' : ''}`}
+            onClick={() => setTab('staging')}
+          >
+            Staging Review
+          </button>
+          <button
+            type="button"
+            className={`btn-tab ${tab === 'members' ? 'is-active' : ''}`}
+            onClick={() => setTab('members')}
+          >
+            Members
+          </button>
+          <button
+            type="button"
+            className={`btn-tab ${tab === 'analytics' ? 'is-active' : ''}`}
+            onClick={() => setTab('analytics')}
+          >
+            Analytics
+          </button>
+        </div>
+
+        {tab === 'staging' ? (
+          <StagingReview csrfToken={csrfToken} onNotify={notify} onConfirm={requestConfirmation} />
+        ) : null}
+        {tab === 'members' ? <MembersExplorer /> : null}
+        {tab === 'analytics' ? <AnalyticsView /> : null}
+      </section>
+    </>
   )
 }
