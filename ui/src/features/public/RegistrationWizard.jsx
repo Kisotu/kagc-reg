@@ -92,6 +92,7 @@ function payloadForSubmit(state, sessionId) {
 export function RegistrationWizard({ sessionId }) {
   const [step, setStep] = useState(1)
   const [state, setState] = useState(initialState)
+  const [privacyConfirmed, setPrivacyConfirmed] = useState(false)
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -209,9 +210,15 @@ export function RegistrationWizard({ sessionId }) {
 
   async function submit() {
     const finalErrors = validateState(state, 3)
+    if (!privacyConfirmed) {
+      finalErrors.privacyConfirmed = "Please confirm you have read Karen AGC's privacy policy"
+    }
     setErrors(finalErrors)
     if (Object.keys(finalErrors).length) {
       setStep(2)
+      if (finalErrors.privacyConfirmed) {
+        setStep(3)
+      }
       return
     }
 
@@ -229,6 +236,7 @@ export function RegistrationWizard({ sessionId }) {
       localStorage.removeItem(localKey)
       await api.request(`/public/drafts/${sessionId}`, { method: 'DELETE' }).catch(() => {})
       setState(initialState)
+      setPrivacyConfirmed(false)
       setStep(1)
     } catch (error) {
       setMessage(error.message)
@@ -240,9 +248,9 @@ export function RegistrationWizard({ sessionId }) {
   const e = errors
 
   return (
-    <section className="space-y-6">
+    <section className="animate-in space-y-6">
       <div className="panel p-6 sm:p-8">
-        <div className="mb-6 flex items-end justify-between">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="font-manrope text-4xl font-extrabold text-[#0b1c3033] sm:text-6xl">{progress}</p>
             <h1 className="font-manrope text-2xl font-bold text-[#0b1c30] sm:text-3xl">
@@ -251,12 +259,12 @@ export function RegistrationWizard({ sessionId }) {
               {step === 3 && 'Review and Submit'}
             </h1>
           </div>
-          <p className="text-sm text-[#5b4139]">Session: {sessionId.slice(0, 10)}...</p>
+          <p className="text-sm text-[#5b4139] sm:text-right">Session: {sessionId.slice(0, 10)}...</p>
         </div>
 
         <div className="h-2 w-full overflow-hidden rounded-full bg-[#d3e4fe]">
           <div
-            className="h-full bg-[linear-gradient(120deg,#ae3100,#fe5b24)] transition-all"
+            className="h-full bg-[#ae3100] transition-[width] duration-500 ease-out"
             style={{ width: `${(step / 3) * 100}%` }}
           />
         </div>
@@ -274,10 +282,10 @@ export function RegistrationWizard({ sessionId }) {
                 key={choice.value}
                 type="button"
                 onClick={() => setState((s) => ({ ...s, registrationType: choice.value }))}
-                className={`rounded-2xl px-5 py-6 text-left transition ${
+                className={`rounded-2xl px-5 py-6 text-left transition duration-200 ${
                   state.registrationType === choice.value
                     ? 'bg-[#eff4ff] ring-2 ring-[#ae3100]'
-                    : 'bg-white ring-1 ring-[#e4beb44f] hover:bg-[#f8f9ff]'
+                    : 'bg-white ring-1 ring-[#e4beb44f] hover:-translate-y-0.5 hover:bg-[#f8f9ff]'
                 }`}
               >
                 <p className="font-manrope text-xl font-bold text-[#0b1c30]">{choice.title}</p>
@@ -429,7 +437,7 @@ export function RegistrationWizard({ sessionId }) {
           </div>
 
           <div className="panel space-y-4 p-6 sm:p-8">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="font-manrope text-xl font-bold text-[#0b1c30]">Household Members</h3>
                 <p className="text-sm text-[#5b4139]">Add, edit, and remove members before submission.</p>
@@ -491,7 +499,7 @@ export function RegistrationWizard({ sessionId }) {
                   onClear={() => setMemberDraft((m) => ({ ...m, location: '', subcounty: '' }))}
                 />
 
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <button type="button" className="btn-primary" onClick={saveMember}>
                     {editingIndex >= 0 ? 'Update Member' : 'Add Family Member'}
                   </button>
@@ -512,7 +520,10 @@ export function RegistrationWizard({ sessionId }) {
                 )}
 
                 {state.family.members.map((member, idx) => (
-                  <article key={`${member.name}-${idx}`} className="rounded-2xl bg-white p-4 shadow-[0_8px_24px_rgba(11,28,48,0.08)]">
+                  <article
+                    key={`${member.name}-${idx}`}
+                    className="rounded-2xl bg-white p-4 shadow-[0_8px_24px_rgba(11,28,48,0.08)] transition duration-200 hover:-translate-y-0.5"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-manrope text-lg font-bold text-[#0b1c30]">{member.name}</p>
@@ -525,7 +536,7 @@ export function RegistrationWizard({ sessionId }) {
                           {member.subcounty || state.family.subcounty || '-'}
                         </p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-col gap-2 sm:flex-row">
                         <button
                           type="button"
                           className="btn-soft"
@@ -596,7 +607,10 @@ export function RegistrationWizard({ sessionId }) {
                 <p className="font-semibold">{state.family.members.length}</p>
               </div>
               {state.family.members.map((member, idx) => (
-                <div key={`${member.name}-${idx}`} className="rounded-xl bg-white p-4 shadow-[0_8px_24px_rgba(11,28,48,0.08)]">
+                <div
+                  key={`${member.name}-${idx}`}
+                  className="rounded-xl bg-white p-4 shadow-[0_8px_24px_rgba(11,28,48,0.08)] transition duration-200 hover:-translate-y-0.5"
+                >
                   <p className="font-semibold text-[#0b1c30]">{member.name}</p>
                   <p className="text-sm text-[#5b4139]">
                     {member.gender} | {member.age_bracket} | {member.phone || '-'}
@@ -605,6 +619,33 @@ export function RegistrationWizard({ sessionId }) {
               ))}
             </div>
           )}
+
+          <section className="rounded-xl border border-[#e4beb44f] bg-[#eff4ff] p-5">
+            <h3 className="font-manrope text-lg font-bold text-[#0b1c30]">Privacy &amp; Approval Workflow</h3>
+            <p className="mt-2 text-sm leading-relaxed text-[#5b4139]">
+              By submitting this registration, you confirm you have read Karen AGC&apos;s privacy policy. Your
+              information is stored securely and can only be accessed by Karen AGC church administrators.
+              Submissions enter a pending review state and are approved by the ministry team before final
+              onboarding.
+            </p>
+            <label className="mt-4 flex items-start gap-3 text-sm font-semibold text-[#0b1c30]">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 rounded border-[#8f7067] text-[#ae3100]"
+                checked={privacyConfirmed}
+                onChange={(ev) => {
+                  setPrivacyConfirmed(ev.target.checked)
+                  setErrors((prevErrors) => {
+                    const nextErrors = { ...prevErrors }
+                    delete nextErrors.privacyConfirmed
+                    return nextErrors
+                  })
+                }}
+              />
+              <span>I confirm that I have read Karen AGC&apos;s Privacy Policy.</span>
+            </label>
+            {e.privacyConfirmed ? <p className="mt-2 text-xs font-semibold text-[#ba1a1a]">{e.privacyConfirmed}</p> : null}
+          </section>
         </div>
       )}
 
