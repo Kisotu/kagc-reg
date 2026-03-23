@@ -1,10 +1,39 @@
+# Backend
 backend/node_modules/
 backend/.env
 backend/.env.development
 backend/data/*.sqlite
 backend/data/*.sqlite-shm
 backend/data/*.sqlite-wal
-backend/npm-debug.log*
-npm-debug.log*
-instructions
 backend/DEPLOY_UBUNTU.md
+
+# Frontend
+ui/node_modules/
+ui/dist/
+ui/dist-ssr/
+ui/*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Project files
+instructions
+AGENTS.md
+
